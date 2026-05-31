@@ -1004,7 +1004,9 @@ export default function App() {
   return DEFAULT_AGENTS.find(a => a.id === "jarvis");
 };
 
-const agent = autoRoute(msg) || activeAgentRef.current;
+// Respect the manually selected agent. Only auto-route when sitting on JARVIS (the default hub).
+const current = activeAgentRef.current;
+const agent = current.id === "jarvis" ? (autoRoute(msg) || current) : current;
 if (agent.id !== activeAgentRef.current.id) {
   setActiveAgent(agent);
   activeAgentRef.current = agent;
