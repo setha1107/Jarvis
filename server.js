@@ -8,6 +8,8 @@ const path = require("path");
 require("dotenv").config({ override: true });
 const { createClient } = require("@supabase/supabase-js");
 const { buildPersonaPrompt, parsePersona } = require("./social/personas");
+const { buildContentPrompt, parseContent } = require("./social/content");
+const { generateAndStoreImage } = require("./social/images");
 
 const app = express();
 app.use(cors());
@@ -173,6 +175,74 @@ app.delete("/api/social/accounts/:id", async (req, res) => {
     .from("social_accounts").delete().eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
+});
+
+// ---- ARIA Studio: content generation ----
+
+// Generate caption/hashtags/image_prompt for an account about a topic.
+async function generatePostContent(account, topic) {
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY missing");
+  const { system, user } = buildContentPrompt({ personality_prompt: account.personality_prompt, topic });
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: "claude-sonnet-4-5-20250929", max_tokens: 1000, system, messages: [{ role: "user", content: user }] }),
+  });
+  const data = await r.json();
+  if (data.error) throw new Error(data.error.message || "Anthropic error");
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+  return parseContent(text);
+}
+
+async function createPost(account, topic, source) {
+  const content = await generatePostContent(account, topic);
+  let imageUrl = null, imageNote = null;
+  try {
+    const img = await generateAndStoreImage(supabaseAdmin, content.image_prompt);
+    imageUrl = img.url; imageNote = img.skipped;
+  } catch (e) {
+    imageNote = e.message; // keep the post even if the image fails
+  }
+  const { data, error } = await supabaseAdmin.from("social_posts").insert({
+    account_id: account.id, source,
+    prompt: source === "on_demand" ? topic : null,
+    generated_text: content.caption,
+    image_prompt: content.image_prompt,
+    image_url: imageUrl,
+    hashtags: content.hashtags,
+    status: "pending_review",
+  }).select().single();
+  if (error) throw new Error("Supabase insert failed: " + error.message);
+  return { post: data, image_note: imageNote };
+}
+
+app.post("/api/social/generate", async (req, res) => {
+  try {
+    const { account_id, prompt } = req.body;
+    if (!account_id || !prompt) return res.status(400).json({ error: "account_id and prompt are required" });
+    const { data: account, error } = await supabaseAdmin.from("social_accounts").select("*").eq("id", account_id).single();
+    if (error || !account) return res.status(404).json({ error: "account not found" });
+    const result = await createPost(account, prompt, "on_demand");
+    res.json(result);
+  } catch (e) {
+    console.error("POST /api/social/generate error:", e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/social/autogenerate", async (req, res) => {
+  try {
+    const { account_id } = req.body;
+    const { data: account, error } = await supabaseAdmin.from("social_accounts").select("*").eq("id", account_id).single();
+    if (error || !account) return res.status(404).json({ error: "account not found" });
+    const pillars = Array.isArray(account.content_pillars) ? account.content_pillars : [];
+    const topic = pillars.length ? pillars[Math.floor(Math.random() * pillars.length)] : (account.niche || "an update");
+    const result = await createPost(account, topic, "auto");
+    res.json(result);
+  } catch (e) {
+    console.error("POST /api/social/autogenerate error:", e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/{*path}", (req, res) => {
