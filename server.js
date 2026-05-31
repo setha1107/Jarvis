@@ -17,21 +17,30 @@ const supabaseAdmin = createClient(
 
 // Calls Anthropic for persona text. Reuses the same key/endpoint as /api/chat.
 async function generatePersona(input) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error("ANTHROPIC_API_KEY missing from server environment");
+  }
   const { system, user } = buildPersonaPrompt(input);
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1200,
-      system,
-      messages: [{ role: "user", content: user }],
-    }),
-  });
+  let r;
+  try {
+    r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 1200,
+        system,
+        messages: [{ role: "user", content: user }],
+      }),
+    });
+  } catch (e) {
+    const cause = e.cause ? ` (cause: ${e.cause.code || e.cause.message || e.cause})` : "";
+    throw new Error(`Anthropic request failed: ${e.message}${cause}`);
+  }
   const data = await r.json();
   if (data.error) throw new Error(data.error.message || "Anthropic error");
   const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
@@ -135,9 +144,10 @@ app.post("/api/social/accounts", async (req, res) => {
       optimal_times: persona.optimal_times,
     }).select().single();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return res.status(500).json({ error: "Supabase insert failed: " + error.message });
     res.json({ account: data });
   } catch (e) {
+    console.error("POST /api/social/accounts error:", e);
     res.status(500).json({ error: e.message });
   }
 });
