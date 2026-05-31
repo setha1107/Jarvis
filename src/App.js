@@ -661,7 +661,7 @@ function SettingsPage({ settings, onSave }) {
           <div className="settings-field"><label>Default Model</label>
             <select className="settings-select" value={local.model} onChange={e => setLocal(l => ({ ...l, model: e.target.value }))}>
               <option value="claude-haiku-4-5-20251001">Claude Haiku (Fast)</option>
-              <option value="claude-sonnet-4-20250514">Claude Sonnet (Smarter)</option>
+              <option value="claude-sonnet-4-5-20250929">Claude Sonnet (Smarter)</option>
             </select>
           </div>
           <div className="settings-field"><label>Accent Color</label>
@@ -1020,7 +1020,7 @@ if (agent.id !== activeAgentRef.current.id) {
       const res = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: agent.id === "dev" ? "claude-sonnet-4-20250514" : s.model,
+          model: agent.id === "dev" ? "claude-sonnet-4-5-20250929" : s.model,
           max_tokens: agent.id === "dev" ? 2000 : 300,
           system: systemPrompt,
           messages: newMessages.map(m => ({ role: m.role, content: m.content }))

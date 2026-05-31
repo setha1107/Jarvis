@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const isMarketing = system && system.includes("ARIA");
 
     const requestBody = {
-      model: (isResearch || isMarketing) ? "claude-sonnet-4-20250514" : model,
+      model: (isResearch || isMarketing) ? "claude-sonnet-4-5-20250929" : model,
       max_tokens: isResearch ? 8000 : isMarketing ? 4000 : max_tokens,
       system,
       messages,
