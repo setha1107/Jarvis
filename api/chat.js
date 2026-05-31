@@ -12,15 +12,16 @@ export default async function handler(req, res) {
   try {
     const { model, max_tokens, system, messages } = req.body;
     const isResearch = system && system.includes("Research Agent");
+    const isMarketing = system && system.includes("ARIA");
 
     const requestBody = {
-      model: isResearch ? "claude-sonnet-4-20250514" : model,
-      max_tokens: isResearch ? 8000 : max_tokens,
+      model: (isResearch || isMarketing) ? "claude-sonnet-4-20250514" : model,
+      max_tokens: isResearch ? 8000 : isMarketing ? 4000 : max_tokens,
       system,
       messages,
     };
 
-    if (isResearch) {
+    if (isResearch || isMarketing) {
       requestBody.tools = [{
         type: "web_search_20250305",
         name: "web_search",
