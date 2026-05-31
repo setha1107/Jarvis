@@ -8,6 +8,7 @@ import {
   Smartphone, Lightbulb, TrendingUp, AlertCircle, CheckCircle
 } from "lucide-react";
 import { supabase } from "./supabase";
+import AriaStudio from "./aria/AriaStudio";
 import "./App.css";
 
 const DEFAULT_AGENTS = [
@@ -1063,6 +1064,7 @@ if (agent.id !== activeAgentRef.current.id) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", Icon: LayoutDashboard },
     { id: "business", label: "Business", Icon: TrendingUp },
+    { id: "aria", label: "ARIA Studio", Icon: Megaphone },
     { id: "agents", label: "Agents", Icon: Cpu },
     { id: "memory", label: "Memory", Icon: MemoryStick },
     { id: "settings", label: "Settings", Icon: Settings },
@@ -1109,6 +1111,7 @@ if (agent.id !== activeAgentRef.current.id) {
           <motion.div key={activeNav} className="page-wrapper" initial={{ opacity:0,y:10 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-10 }} transition={{ duration:0.2 }}>
             <ParticleField /><div className="grid-overlay" />
             {activeNav === "business" && <BusinessDashboard messages={messages} tasks={tasks} memory={memory} settings={settings} />}
+            {activeNav === "aria" && <AriaStudio />}
             {activeNav === "agents" && <AgentsPage agents={DEFAULT_AGENTS} allMessages={messages} activeAgent={activeAgent} setActiveAgent={setActiveAgent} setActiveNav={setActiveNav} />}
             {activeNav === "memory" && <MemoryPage memory={memory} allMessages={messages} />}
             {activeNav === "settings" && <SettingsPage settings={settings} onSave={saveSettings} />}
