@@ -32,3 +32,12 @@
 .aria-form { display: flex; flex-direction: column; gap: .7rem; }
 .aria-form label { display: flex; flex-direction: column; gap: .25rem; font-size: .78rem; color: #9a9ab0; }
 .aria-form input, .aria-form select { background: #15152a; border: 1px solid #ffffff1f; border-radius: 7px; padding: .5rem; color: #e8e8f0; font-size: .9rem; }
+.aria-composer-controls { display: flex; flex-direction: column; gap: .7rem; max-width: 640px; }
+.aria-select, .aria-textarea { background: #15152a; border: 1px solid #ffffff1f; border-radius: 7px; padding: .6rem; color: #e8e8f0; font-size: .9rem; }
+.aria-textarea { min-height: 90px; resize: vertical; }
+.aria-post-preview { margin-top: 1.4rem; max-width: 540px; border: 1px solid #bd20ad44; border-radius: 14px; padding: 1rem; background: #0d0d18; }
+.app-post-img { width: 100%; border-radius: 10px; display: block; }
+.app-post-noimg { padding: 2rem; text-align: center; color: #9a9ab0; border: 1px dashed #ffffff22; border-radius: 10px; }
+.app-post-caption { margin: .8rem 0 .4rem; color: #e8e8f0; white-space: pre-wrap; }
+.app-post-tags { color: #bd20ad; font-size: .85rem; }
+.app-post-status { margin-top: .6rem; font-size: .72rem; color: #ffb347; }

@@ -35,3 +35,14 @@ export async function deleteAccount(id) {
   if (d.error) throw new Error(d.error);
   return true;
 }
+
+export async function generatePost(account_id, prompt) {
+  const r = await fetch(`${BASE}/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ account_id, prompt }),
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d; // { post, image_note }
+}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Megaphone } from "lucide-react";
 import PersonalitiesTab from "./PersonalitiesTab";
+import ComposerTab from "./ComposerTab";
 import "./aria.css";
 
 export default function AriaStudio() {
@@ -28,7 +29,7 @@ export default function AriaStudio() {
         ))}
       </div>
       {tab === "personalities" && <PersonalitiesTab />}
-      {tab === "composer" && <div className="aria-empty">Composer arrives in Phase 2.</div>}
+      {tab === "composer" && <ComposerTab />}
       {tab === "queue" && <div className="aria-empty">Queue arrives in Phase 3.</div>}
     </div>
   );
