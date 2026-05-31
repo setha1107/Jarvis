@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-require("dotenv").config();
+require("dotenv").config({ override: true });
 const { createClient } = require("@supabase/supabase-js");
 const { buildPersonaPrompt, parsePersona } = require("./social/personas");
 
@@ -175,7 +175,21 @@ app.get("/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-app.listen(3001, () => {
+const SUPA_URL = process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
+const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+app.listen(3001, async () => {
   console.log("JARVIS API running at http://localhost:3001");
-  console.log("API key loaded:", process.env.ANTHROPIC_API_KEY ? "YES" : "NO - check your .env file");
+  console.log("  ANTHROPIC_API_KEY:", process.env.ANTHROPIC_API_KEY ? "loaded" : "MISSING");
+  console.log("  SUPABASE URL:", SUPA_URL ? "loaded" : "MISSING");
+  console.log("  SUPABASE KEY:", SUPA_KEY ? "loaded" : "MISSING");
+  // Quick connectivity check so failures show at boot, not mid-request.
+  try {
+    const { error } = await supabaseAdmin.from("social_accounts").select("id").limit(1);
+    if (error) console.log("  Supabase check: REACHED, but query error ->", error.message);
+    else console.log("  Supabase check: OK (social_accounts table reachable)");
+  } catch (e) {
+    console.log("  Supabase check: CANNOT CONNECT ->", e.message,
+      e.cause ? "(cause: " + (e.cause.code || e.cause.message) + ")" : "");
+  }
 });
