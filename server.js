@@ -82,7 +82,7 @@ app.get("/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-app.listen(3000, () => {
-  console.log("JARVIS running at http://localhost:3000");
+app.listen(3001, () => {
+  console.log("JARVIS API running at http://localhost:3001");
   console.log("API key loaded:", process.env.ANTHROPIC_API_KEY ? "YES" : "NO - check your .env file");
 });
