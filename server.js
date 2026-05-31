@@ -1,3 +1,7 @@
+// Prefer IPv4 — fixes Node/undici "fetch failed" to hosts (e.g. Supabase) with
+// broken/blocked IPv6 on Windows. Must run before any network module is used.
+require("dns").setDefaultResultOrder("ipv4first");
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
