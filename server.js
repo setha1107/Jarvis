@@ -2,11 +2,41 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
+const { createClient } = require("@supabase/supabase-js");
+const { buildPersonaPrompt, parsePersona } = require("./social/personas");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "build")));
+
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY
+);
+
+// Calls Anthropic for persona text. Reuses the same key/endpoint as /api/chat.
+async function generatePersona(input) {
+  const { system, user } = buildPersonaPrompt(input);
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 1200,
+      system,
+      messages: [{ role: "user", content: user }],
+    }),
+  });
+  const data = await r.json();
+  if (data.error) throw new Error(data.error.message || "Anthropic error");
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+  return parsePersona(text);
+}
 
 app.post("/api/chat", async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -76,6 +106,59 @@ app.post("/api/chat", async (req, res) => {
     console.error("Fetch error:", err);
     return res.status(500).json({ error: err.message });
   }
+});
+
+// ---- ARIA Studio: social account routes ----
+
+app.get("/api/social/accounts", async (req, res) => {
+  const { data, error } = await supabaseAdmin
+    .from("social_accounts")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ accounts: data });
+});
+
+app.post("/api/social/accounts", async (req, res) => {
+  try {
+    const { name, platform = "facebook", niche, audience, tone,
+            posting_frequency = "daily", accent_color = "#bd20ad" } = req.body;
+    if (!name) return res.status(400).json({ error: "name is required" });
+
+    const persona = await generatePersona({ name, platform, niche, audience, tone, posting_frequency });
+
+    const { data, error } = await supabaseAdmin.from("social_accounts").insert({
+      name, platform, niche, audience, tone, posting_frequency, accent_color,
+      bio: persona.bio,
+      personality_prompt: persona.personality_prompt,
+      content_pillars: persona.content_pillars,
+      optimal_times: persona.optimal_times,
+    }).select().single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ account: data });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.patch("/api/social/accounts/:id", async (req, res) => {
+  const allowed = ["name","niche","audience","tone","bio","personality_prompt",
+                   "content_pillars","posting_frequency","optimal_times",
+                   "auto_publish","accent_color","status","fb_page_id","fb_access_token"];
+  const update = {};
+  for (const k of allowed) if (k in req.body) update[k] = req.body[k];
+  const { data, error } = await supabaseAdmin
+    .from("social_accounts").update(update).eq("id", req.params.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ account: data });
+});
+
+app.delete("/api/social/accounts/:id", async (req, res) => {
+  const { error } = await supabaseAdmin
+    .from("social_accounts").delete().eq("id", req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
 });
 
 app.get("/{*path}", (req, res) => {
